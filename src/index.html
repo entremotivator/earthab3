@@ -3,11 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Earth 3D</title>
-    <link rel="stylesheet" href="./style.css">
+    <title>Earth 3D with Spinning AB3 Logo</title>
+    <style>
+        /* Remove margins and padding on all elements */
+        * {  
+            margin: 0;  
+            padding: 0; 
+        }
+
+        /* Remove canvas outline */
+        .webgl {
+            position: fixed;
+            top: 0;
+            left: 0;
+            outline: none;
+        }
+
+        /* Remove scrolling */
+        html, body {
+            overflow: hidden;
+        }
+
+        /* Spinning logo styles */
+        .spinning-logo {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 120px;
+            height: auto;
+            animation: spin 8s linear infinite;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+        }
+
+        .spinning-logo:hover {
+            opacity: 1;
+        }
+
+        .spinning-logo img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px;
+        }
+
+        /* Spinning animation */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive design for mobile */
+        @media (max-width: 768px) {
+            .spinning-logo {
+                width: 80px;
+                top: 15px;
+                right: 15px;
+            }
+        }
+    </style>
 </head>
 <body>
     <canvas class="webgl"></canvas>
-    <script type="module" src="./script.js"></script>
+    <div class="spinning-logo" title="Click to pause/resume spinning">
+        <img src="https://ab3entertainment.com/wp-content/uploads/2025/06/70fc73ac-8465-d966-f6ca-7524fb95e3c8.png" alt="AB3 Entertainment Logo" />
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.167.0';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.167.0/examples/jsm/controls/OrbitControls.js';
+
+        // Canvas
+        const canvas = document.querySelector('canvas.webgl');
+
+        // Scene
+        const scene = new THREE.Scene();
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(-3.2, 2.9, -1.2).normalize();
+        camera.lookAt(0, 0, 0);
+        scene.add(camera);
+
+        // Lights
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 5);
+        directionalLight.position.set(5, 5, 5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Ambient light
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.castShadow = true;
+        renderer.setClearColor(0x000000, 1);
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.render(scene, camera);
+        });
+
+        // Handle Fullscreen
+        window.addEventListener('dblclick', () => {
+            const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+            
+            if (!fullscreenElement) {
+                canvas.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        });
+
+        // Textures
+        const textureLoader = new THREE.TextureLoader();
+
+        // Create a simple Earth with basic materials (since we don't have the shader files)
+        const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
+        
+        // Load Earth texture (using a public Earth texture)
+        const earthTexture = textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+        earthTexture.colorSpace = THREE.SRGBColorSpace;
+
+        const earthMaterial = new THREE.MeshPhongMaterial({
+            map: earthTexture,
+            shininess: 100
+        });
+
+        const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+        earth.rotation.x = THREE.MathUtils.degToRad(23.5);
+        scene.add(earth);
+
+        // Atmosphere effect (simple version)
+        const atmosphereGeometry = new THREE.SphereGeometry(1.025, 64, 64);
+        const atmosphereMaterial = new THREE.MeshPhongMaterial({
+            color: 0x9fd8ff,
+            transparent: true,
+            opacity: 0.1,
+            side: THREE.BackSide
+        });
+        const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+        scene.add(atmosphere);
+
+        // Orbit controls
+        const controls = new OrbitControls(camera, canvas);
+        controls.enableDamping = true;
+        controls.minDistance = 3;
+        controls.maxDistance = 10;
+
+        // Credits
+        const credits = document.createElement('a');
+        credits.href = 'https://github.com/mitchcamza/Earth3D';
+        credits.style.position = 'absolute';
+        credits.style.bottom = '10px';
+        credits.style.left = '10px';
+        credits.style.color = 'white';
+        credits.style.fontFamily = 'Arial';
+        credits.style.fontSize = '12px';
+        credits.innerHTML = 'Credits';
+        document.body.appendChild(credits);
+
+        // Spinning logo interaction
+        const spinningLogo = document.querySelector('.spinning-logo');
+        let isSpinning = true;
+
+        spinningLogo.addEventListener('click', () => {
+            if (isSpinning) {
+                spinningLogo.style.animationPlayState = 'paused';
+                isSpinning = false;
+            } else {
+                spinningLogo.style.animationPlayState = 'running';
+                isSpinning = true;
+            }
+        });
+
+        // Animation
+        const clock = new THREE.Clock();
+        const tick = () => {
+            const elapsedTime = clock.getElapsedTime();
+
+            // Rotate the earth
+            earth.rotation.y = elapsedTime * 0.1;
+
+            // Update controls
+            controls.update();
+
+            // Render
+            renderer.render(scene, camera);
+
+            // Call tick again on the next frame
+            requestAnimationFrame(tick);
+        };
+        tick();
+    </script>
 </body>
 </html>
+
