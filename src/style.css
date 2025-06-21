@@ -19,3 +19,48 @@ html, body
 {
     overflow: hidden;
 }
+
+/* Spinning logo styles */
+.spinning-logo {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 120px;
+    height: auto;
+    animation: spin 8s linear infinite;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+.spinning-logo:hover {
+    opacity: 1;
+}
+
+.spinning-logo img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 8px;
+}
+
+/* Spinning animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+    .spinning-logo {
+        width: 80px;
+        top: 15px;
+        right: 15px;
+    }
+}
