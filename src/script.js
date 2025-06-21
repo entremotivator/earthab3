@@ -162,7 +162,6 @@ const updateSun = () =>
 };
 updateSun();
 
-
 // Orbit controls
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -180,6 +179,80 @@ credits.style.fontFamily = 'Arial';
 credits.style.fontSize = '12px';
 credits.innerHTML = 'Credits';
 document.body.appendChild(credits);
+
+// ===== SPINNING LOGO FUNCTIONALITY =====
+// Create spinning logo element
+const spinningLogo = document.createElement('div');
+spinningLogo.className = 'spinning-logo';
+spinningLogo.title = 'Click to pause/resume spinning';
+
+const logoImg = document.createElement('img');
+logoImg.src = 'https://ab3entertainment.com/wp-content/uploads/2025/06/70fc73ac-8465-d966-f6ca-7524fb95e3c8.png';
+logoImg.alt = 'AB3 Entertainment Logo';
+
+spinningLogo.appendChild(logoImg);
+document.body.appendChild(spinningLogo);
+
+// Add CSS styles for spinning logo
+const logoStyles = document.createElement('style');
+logoStyles.textContent = `
+    .spinning-logo {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        width: 120px;
+        height: auto;
+        animation: spin 8s linear infinite;
+        opacity: 0.9;
+        transition: opacity 0.3s ease;
+        cursor: pointer;
+    }
+
+    .spinning-logo:hover {
+        opacity: 1;
+    }
+
+    .spinning-logo img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .spinning-logo {
+            width: 80px;
+            top: 15px;
+            right: 15px;
+        }
+    }
+`;
+document.head.appendChild(logoStyles);
+
+// Spinning logo interaction
+let isSpinning = true;
+spinningLogo.addEventListener('click', () => {
+    if (isSpinning) {
+        spinningLogo.style.animationPlayState = 'paused';
+        isSpinning = false;
+    } else {
+        spinningLogo.style.animationPlayState = 'running';
+        isSpinning = true;
+    }
+});
+// ===== END SPINNING LOGO FUNCTIONALITY =====
 
 // Animation
 const clock = new THREE.Clock();
