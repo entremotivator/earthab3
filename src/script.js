@@ -180,79 +180,138 @@ credits.style.fontSize = '12px';
 credits.innerHTML = 'Credits';
 document.body.appendChild(credits);
 
-// ===== SPINNING LOGO FUNCTIONALITY =====
-// Create spinning logo element
-const spinningLogo = document.createElement('div');
-spinningLogo.className = 'spinning-logo';
-spinningLogo.title = 'Click to pause/resume spinning';
+// ===== ORBITING LOGO FUNCTIONALITY =====
+// Create orbiting logo HTML element
+const orbitingLogo = document.createElement('div');
+orbitingLogo.className = 'orbiting-logo';
+orbitingLogo.title = 'AB3 Entertainment - Click to pause/resume orbit';
+orbitingLogo.innerHTML = '<img src="https://ab3entertainment.com/wp-content/uploads/2025/06/70fc73ac-8465-d966-f6ca-7524fb95e3c8.png" alt="AB3 Entertainment Logo" />';
+document.body.appendChild(orbitingLogo);
 
-const logoImg = document.createElement('img');
-logoImg.src = 'https://ab3entertainment.com/wp-content/uploads/2025/06/70fc73ac-8465-d966-f6ca-7524fb95e3c8.png';
-logoImg.alt = 'AB3 Entertainment Logo';
-
-spinningLogo.appendChild(logoImg);
-document.body.appendChild(spinningLogo);
-
-// Add CSS styles for spinning logo
-const logoStyles = document.createElement('style');
-logoStyles.textContent = `
-    .spinning-logo {
+// Add CSS styles for orbiting logo
+const orbitingLogoStyles = document.createElement('style');
+orbitingLogoStyles.textContent = `
+    .orbiting-logo {
         position: fixed;
-        top: 20px;
-        right: 20px;
         z-index: 1000;
-        width: 120px;
+        width: 80px;
         height: auto;
-        animation: spin 8s linear infinite;
         opacity: 0.9;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.3s ease, transform 0.1s ease;
         cursor: pointer;
+        pointer-events: auto;
+        transform-origin: center center;
     }
 
-    .spinning-logo:hover {
+    .orbiting-logo:hover {
         opacity: 1;
+        transform: scale(1.1);
     }
 
-    .spinning-logo img {
+    .orbiting-logo img {
         width: 100%;
         height: auto;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         background: rgba(255, 255, 255, 0.95);
-        padding: 8px;
+        padding: 6px;
     }
 
-    @keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
+    .orbiting-logo.behind {
+        opacity: 0.3;
+        z-index: 500;
+    }
+
+    .orbiting-logo.behind:hover {
+        opacity: 0.6;
     }
 
     @media (max-width: 768px) {
-        .spinning-logo {
-            width: 80px;
-            top: 15px;
-            right: 15px;
+        .orbiting-logo {
+            width: 60px;
         }
     }
 `;
-document.head.appendChild(logoStyles);
+document.head.appendChild(orbitingLogoStyles);
 
-// Spinning logo interaction
-let isSpinning = true;
-spinningLogo.addEventListener('click', () => {
-    if (isSpinning) {
-        spinningLogo.style.animationPlayState = 'paused';
-        isSpinning = false;
-    } else {
-        spinningLogo.style.animationPlayState = 'running';
-        isSpinning = true;
+// Orbit parameters
+const orbitRadius = 2.5;
+const orbitSpeed = 0.3;
+const orbitTilt = Math.PI * 0.2;
+
+// Logo orbit state
+let orbitAngle = 0;
+let isOrbiting = true;
+
+// Create invisible 3D object to track orbit position
+const logoOrbitHelper = new THREE.Object3D();
+scene.add(logoOrbitHelper);
+
+// Vector for 3D to 2D projection
+const logoPosition3D = new THREE.Vector3();
+const logoPosition2D = new THREE.Vector2();
+
+// Function to update logo position
+function updateLogoPosition(elapsedTime) {
+    if (isOrbiting) {
+        orbitAngle = elapsedTime * orbitSpeed;
     }
+    
+    logoPosition3D.set(
+        Math.cos(orbitAngle) * orbitRadius,
+        Math.sin(orbitAngle * 0.7) * orbitRadius * 0.3,
+        Math.sin(orbitAngle) * orbitRadius
+    );
+    
+    logoPosition3D.applyAxisAngle(new THREE.Vector3(1, 0, 0), orbitTilt);
+    logoOrbitHelper.position.copy(logoPosition3D);
+    logoPosition3D.project(camera);
+    
+    logoPosition2D.x = (logoPosition3D.x * 0.5 + 0.5) * window.innerWidth;
+    logoPosition2D.y = (-logoPosition3D.y * 0.5 + 0.5) * window.innerHeight;
+    
+    const isBehindEarth = logoPosition3D.z > 0.1;
+    
+    orbitingLogo.style.left = (logoPosition2D.x - 40) + 'px';
+    orbitingLogo.style.top = (logoPosition2D.y - 40) + 'px';
+    
+    if (isBehindEarth) {
+        orbitingLogo.classList.add('behind');
+    } else {
+        orbitingLogo.classList.remove('behind');
+    }
+    
+    const margin = 100;
+    const isVisible = logoPosition2D.x > -margin && 
+                    logoPosition2D.x < window.innerWidth + margin &&
+                    logoPosition2D.y > -margin && 
+                    logoPosition2D.y < window.innerHeight + margin;
+    
+    orbitingLogo.style.display = isVisible ? 'block' : 'none';
+}
+
+// Logo click interaction
+orbitingLogo.addEventListener('click', (e) => {
+    e.preventDefault();
+    isOrbiting = !isOrbiting;
+    orbitingLogo.style.transform = isOrbiting ? 'scale(1)' : 'scale(1.2)';
+    orbitingLogo.title = isOrbiting ? 
+        'AB3 Entertainment - Click to pause orbit' : 
+        'AB3 Entertainment - Click to resume orbit';
 });
-// ===== END SPINNING LOGO FUNCTIONALITY =====
+
+// Optional orbit trail
+const orbitTrailGeometry = new THREE.RingGeometry(orbitRadius - 0.02, orbitRadius + 0.02, 64);
+const orbitTrailMaterial = new THREE.MeshBasicMaterial({
+    color: 0x444444,
+    transparent: true,
+    opacity: 0.1,
+    side: THREE.DoubleSide
+});
+const orbitTrail = new THREE.Mesh(orbitTrailGeometry, orbitTrailMaterial);
+orbitTrail.rotation.x = Math.PI / 2 + orbitTilt;
+scene.add(orbitTrail);
+// ===== END ORBITING LOGO FUNCTIONALITY =====
 
 // Animation
 const clock = new THREE.Clock();
@@ -262,6 +321,9 @@ const tick = () =>
 
     // Rotate the earth
     earth.rotation.y = elapsedTime * 0.1;
+
+    // Update orbiting logo position
+    updateLogoPosition(elapsedTime);
 
     // Update controls
     controls.update();
@@ -274,3 +336,5 @@ const tick = () =>
     requestAnimationFrame(tick);
 };
 tick();
+
+
