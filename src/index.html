@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Earth 3D with Spinning AB3 Logo</title>
+    <title>Earth 3D with Orbiting AB3 Logo</title>
     <style>
         /* Remove margins and padding on all elements */
         * {  
@@ -24,57 +24,73 @@
             overflow: hidden;
         }
 
-        /* Spinning logo styles */
-        .spinning-logo {
+        /* Orbiting logo styles */
+        .orbiting-logo {
             position: fixed;
-            top: 20px;
-            right: 20px;
             z-index: 1000;
-            width: 120px;
+            width: 80px;
             height: auto;
-            animation: spin 8s linear infinite;
             opacity: 0.9;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s ease, transform 0.1s ease;
             cursor: pointer;
+            pointer-events: auto;
+            transform-origin: center center;
         }
 
-        .spinning-logo:hover {
+        .orbiting-logo:hover {
             opacity: 1;
+            transform: scale(1.1);
         }
 
-        .spinning-logo img {
+        .orbiting-logo img {
             width: 100%;
             height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             background: rgba(255, 255, 255, 0.95);
-            padding: 8px;
+            padding: 6px;
         }
 
-        /* Spinning animation */
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
+        /* When logo is behind Earth, make it more transparent */
+        .orbiting-logo.behind {
+            opacity: 0.3;
+            z-index: 500;
+        }
+
+        .orbiting-logo.behind:hover {
+            opacity: 0.6;
         }
 
         /* Responsive design for mobile */
         @media (max-width: 768px) {
-            .spinning-logo {
-                width: 80px;
-                top: 15px;
-                right: 15px;
+            .orbiting-logo {
+                width: 60px;
             }
+        }
+
+        /* Orbit controls info */
+        .orbit-info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
     <canvas class="webgl"></canvas>
-    <div class="spinning-logo" title="Click to pause/resume spinning">
+    <div class="orbiting-logo" title="AB3 Entertainment - Click to pause/resume orbit">
         <img src="https://ab3entertainment.com/wp-content/uploads/2025/06/70fc73ac-8465-d966-f6ca-7524fb95e3c8.png" alt="AB3 Entertainment Logo" />
+    </div>
+    <div class="orbit-info">
+        🌍 AB3 Logo orbiting Earth<br>
+        Click logo to pause/resume orbit
     </div>
 
     <script type="module">
@@ -116,7 +132,6 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.render(scene, camera);
         });
 
         // Handle Fullscreen
@@ -137,10 +152,10 @@
         // Textures
         const textureLoader = new THREE.TextureLoader();
 
-        // Create a simple Earth with basic materials (since we don't have the shader files)
+        // Create Earth
         const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
         
-        // Load Earth texture (using a public Earth texture)
+        // Load Earth texture
         const earthTexture = textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
         earthTexture.colorSpace = THREE.SRGBColorSpace;
 
@@ -153,7 +168,7 @@
         earth.rotation.x = THREE.MathUtils.degToRad(23.5);
         scene.add(earth);
 
-        // Atmosphere effect (simple version)
+        // Atmosphere effect
         const atmosphereGeometry = new THREE.SphereGeometry(1.025, 64, 64);
         const atmosphereMaterial = new THREE.MeshPhongMaterial({
             color: 0x9fd8ff,
@@ -182,19 +197,102 @@
         credits.innerHTML = 'Credits';
         document.body.appendChild(credits);
 
-        // Spinning logo interaction
-        const spinningLogo = document.querySelector('.spinning-logo');
-        let isSpinning = true;
-
-        spinningLogo.addEventListener('click', () => {
-            if (isSpinning) {
-                spinningLogo.style.animationPlayState = 'paused';
-                isSpinning = false;
-            } else {
-                spinningLogo.style.animationPlayState = 'running';
-                isSpinning = true;
+        // ===== ORBITING LOGO FUNCTIONALITY =====
+        const orbitingLogo = document.querySelector('.orbiting-logo');
+        
+        // Orbit parameters
+        const orbitRadius = 2.5; // Distance from Earth center
+        const orbitSpeed = 0.3; // Rotation speed (radians per second)
+        const orbitTilt = Math.PI * 0.2; // Tilt the orbit plane
+        
+        // Logo orbit state
+        let orbitAngle = 0;
+        let isOrbiting = true;
+        
+        // Create invisible 3D object to track orbit position
+        const logoOrbitHelper = new THREE.Object3D();
+        scene.add(logoOrbitHelper);
+        
+        // Vector for 3D to 2D projection
+        const logoPosition3D = new THREE.Vector3();
+        const logoPosition2D = new THREE.Vector2();
+        
+        // Function to update logo position
+        function updateLogoPosition(elapsedTime) {
+            if (isOrbiting) {
+                orbitAngle = elapsedTime * orbitSpeed;
             }
+            
+            // Calculate 3D position in orbit
+            logoPosition3D.set(
+                Math.cos(orbitAngle) * orbitRadius,
+                Math.sin(orbitAngle * 0.7) * orbitRadius * 0.3, // Slight vertical oscillation
+                Math.sin(orbitAngle) * orbitRadius
+            );
+            
+            // Apply orbit tilt
+            logoPosition3D.applyAxisAngle(new THREE.Vector3(1, 0, 0), orbitTilt);
+            
+            // Update helper object position
+            logoOrbitHelper.position.copy(logoPosition3D);
+            
+            // Project 3D position to 2D screen coordinates
+            logoPosition3D.project(camera);
+            
+            // Convert to screen coordinates
+            logoPosition2D.x = (logoPosition3D.x * 0.5 + 0.5) * window.innerWidth;
+            logoPosition2D.y = (-logoPosition3D.y * 0.5 + 0.5) * window.innerHeight;
+            
+            // Check if logo is behind Earth (z > 0 means behind camera)
+            const distanceFromEarth = logoOrbitHelper.position.distanceTo(earth.position);
+            const isBehindEarth = logoPosition3D.z > 0.1;
+            
+            // Update logo DOM element position
+            orbitingLogo.style.left = (logoPosition2D.x - 40) + 'px'; // Center the logo
+            orbitingLogo.style.top = (logoPosition2D.y - 40) + 'px';
+            
+            // Add/remove behind class for visual effect
+            if (isBehindEarth) {
+                orbitingLogo.classList.add('behind');
+            } else {
+                orbitingLogo.classList.remove('behind');
+            }
+            
+            // Hide logo if it's too far off screen
+            const margin = 100;
+            const isVisible = logoPosition2D.x > -margin && 
+                            logoPosition2D.x < window.innerWidth + margin &&
+                            logoPosition2D.y > -margin && 
+                            logoPosition2D.y < window.innerHeight + margin;
+            
+            orbitingLogo.style.display = isVisible ? 'block' : 'none';
+        }
+        
+        // Logo click interaction
+        orbitingLogo.addEventListener('click', (e) => {
+            e.preventDefault();
+            isOrbiting = !isOrbiting;
+            
+            // Visual feedback
+            orbitingLogo.style.transform = isOrbiting ? 'scale(1)' : 'scale(1.2)';
+            orbitingLogo.title = isOrbiting ? 
+                'AB3 Entertainment - Click to pause orbit' : 
+                'AB3 Entertainment - Click to resume orbit';
         });
+        
+        // Add orbit trail visualization (optional)
+        const orbitTrailGeometry = new THREE.RingGeometry(orbitRadius - 0.02, orbitRadius + 0.02, 64);
+        const orbitTrailMaterial = new THREE.MeshBasicMaterial({
+            color: 0x444444,
+            transparent: true,
+            opacity: 0.1,
+            side: THREE.DoubleSide
+        });
+        const orbitTrail = new THREE.Mesh(orbitTrailGeometry, orbitTrailMaterial);
+        orbitTrail.rotation.x = Math.PI / 2 + orbitTilt;
+        scene.add(orbitTrail);
+        
+        // ===== END ORBITING LOGO FUNCTIONALITY =====
 
         // Animation
         const clock = new THREE.Clock();
@@ -203,6 +301,9 @@
 
             // Rotate the earth
             earth.rotation.y = elapsedTime * 0.1;
+
+            // Update orbiting logo position
+            updateLogoPosition(elapsedTime);
 
             // Update controls
             controls.update();
@@ -217,4 +318,6 @@
     </script>
 </body>
 </html>
+
+
 
